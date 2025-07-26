@@ -4,12 +4,12 @@ import cors from "cors";
 import connect from "./src/db/connect.js";
 import cookieParser from "cookie-parser";
 import fs from "node:fs";
+// import errorHandler from "./src/helpers/errorhandler.js";
 
 dotenv.config();
 
-const port = 8000;
-const CLIENT_URL = "http://localhost:3000";
-
+const port = process.env.PORT || 8000;
+const CLIENT_URL = process.env.CLIENT_URL;
 
 const app = express();
 
@@ -22,9 +22,8 @@ app.use(cors(
 ))
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-
+app.use(cookieParser());// error handler middleware
+// app.use(errorHandler);
 
 // routes
 const routeFiles = fs.readdirSync("./src/routes").filter(file => file.endsWith(".js"));
