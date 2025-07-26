@@ -3,6 +3,10 @@ import User from '../../models/auth/UserModel.js';
 import generateToken from '../../helpers/generateToken.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import Token from '../../models/auth/Token.js';
+import crypto from 'crypto';
+import hashToken from '../../helpers/hashToken.js';
+import { sendEmail, sendEmailHandlebars } from '../../helpers/sendEmail.js';
 
 export const registerUser = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
@@ -175,4 +179,100 @@ export const userLoginStatus = asyncHandler(async (req, res) => {
     } else {
         return res.status(401).json({ message: false });
     }
+});
+
+//email verification
+export const verifyEmail = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    // if user is verified
+    if (user.isVerified) {
+        return res.status(400).json({ message: "User is already verified" });
+    }
+
+    let token = await Token.findOne({ userId: user._id });
+
+    // if token exists --> delete the token
+    if (token) {
+        await token.deleteOne();
+    }
+
+    // create a verification token using the Token model ---> crypto
+    const verificationToken = crypto.randomBytes(64).toString("hex") + user._id;
+
+    // hash the token
+
+    const hashedToken = await hashToken(verificationToken);
+
+    await new Token({
+        userId: user._id,
+        verificationToken: hashedToken,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+    }).save();
+
+    // create verification link
+    const verificationLink = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+
+    // send email to user with the verification link
+    const subject = "Email Verification - Authentication App";
+    const send_to = user.email;
+    const reply_to = "noreply@gmail.com"
+    const template = "emailVerification";
+    const send_from = process.env.USER_EMAIL;
+    const name = user.name;
+    const url = verificationLink;
+
+    try {
+        await sendEmail(subject, send_to, send_from, template, name, url);
+        // await sendEmailHandlebars(subject, send_to, reply_to, send_from,template, name, url);
+        res.status(200).json({ message: "Verification email sent successfully" });
+    } catch (error) {
+        console.error("Error sending verification email:", error);
+        return res.status(500).json({ message: "Error sending verification email" });
+    }
+
+});
+
+//verifyUser
+export const verifyUser = asyncHandler(async (req, res) => {
+    const { verificationToken } = req.params;
+    console.log("Verification Token:", verificationToken);
+    if (!verificationToken) {
+        return res.status(400).json({ message: "Invalid verification token" });
+    }
+
+    // hash the verification token
+    const hashedToken = hashToken(verificationToken);
+    console.log("hashedToken:", hashedToken);
+
+    // find the user by verification token
+    const userToken = await Token.findOne({
+        verificationToken: hashedToken,
+        // check if the token has not expired
+        expiresAt: { $gt: Date.now() },
+    });
+
+    console.log("userToken:", userToken);
+
+    if (!userToken) {
+        return res
+            .status(400)
+            .json({ message: "Invalid or expired verification token" });
+    }
+
+    // find user with the user id in the token
+    const user = await User.findById(userToken.userId);
+    if(user.isVerified) {
+        return res.status(400).json({ message: "User is already verified" });
+    };
+
+    // update user to verified
+    user.isVerified = true;
+    await user.save();
+    res.status(200).json({ message: "User verified successfully" });
+
 });
