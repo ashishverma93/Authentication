@@ -43,3 +43,26 @@ export const adminMiddleware = asyncHandler(async (req, res, next) => {
         res.status(403).json({ message: "Access denied, admin only" });
     }
 });
+
+export const creatorMiddleware = asyncHandler(async (req, res, next) => {
+    if ((req.user && req.user.role === 'creator') || (req.user && req.user.role === 'admin' )) {
+        // if user is creator, proceed to the next middleware or route handler
+        next();
+        return;
+    } else {
+        // if not creator, sent 403 Forbidden response -> terminate the request
+        res.status(403).json({ message: "Access denied, creator or admin only" });
+    }
+});
+
+// verify user middleware
+export const verifyUserMiddleware = asyncHandler(async (req, res, next) => {
+    if (req.user && req.user.isVerified) {
+        // if user is verified, proceed to the next middleware or route handler
+        next();
+        return;
+    } else {
+        // if not verified, sent 403 Forbidden response -> terminate the request
+        res.status(403).json({ message: "Please verified your email address" });
+    }   
+});

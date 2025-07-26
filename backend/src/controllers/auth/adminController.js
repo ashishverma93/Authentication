@@ -18,3 +18,12 @@ export const deleteUser = asyncHandler(async (req, res) => {
     }
 
 });
+
+export const getAllUsers = asyncHandler(async (req, res) => {
+    const users = await User.find(); // exclude password from the response
+    if (users) {
+        res.status(200).json(users);
+    } else {
+        res.status(404).json({ message: "No users found" });
+    }
+});
