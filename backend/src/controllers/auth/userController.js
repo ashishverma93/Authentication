@@ -20,6 +20,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     const existingUser = await User.findOne({ email });
     console.log("Existing User:", existingUser);
     if (existingUser) {
+        // Bad request
         return res.status(400).json({ message: "User already exists" });
     }
 
@@ -112,4 +113,10 @@ export const loginUser = asyncHandler(async (req, res) => {
     } else {
         res.status(400).json({ message: "Invalid email or password" });
     }
+});
+
+// logout user
+export const logoutUser = asyncHandler(async (req, res) => {
+    res.clearCookie("token");
+    res.status(200).json({ message: "User logged out successfully" });
 });
