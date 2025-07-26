@@ -266,7 +266,7 @@ export const verifyUser = asyncHandler(async (req, res) => {
 
     // find user with the user id in the token
     const user = await User.findById(userToken.userId);
-    if(user.isVerified) {
+    if (user.isVerified) {
         return res.status(400).json({ message: "User is already verified" });
     };
 
@@ -330,5 +330,63 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     } catch (error) {
         console.error("Error sending password reset email:", error);
         return res.status(500).json({ message: "Error sending password reset email" });
+    }
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+    const { resetPasswordToken } = req.params;
+    console.log("Reset Password Token:", resetPasswordToken);
+    const { password } = req.body;
+
+    if (!password) {
+        return res.status(400).json({ message: "Password is required" });
+    }
+
+    // hash the reset token
+    const hashedToken = hashToken(resetPasswordToken);
+
+    // check if token exists and has not expired
+    const userToken = await Token.findOne({
+        passwordResetToken: hashedToken,
+        expiresAt: { $gt: Date.now() },
+    });
+    console.log("User Token:", userToken);
+    if (!userToken) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+    }
+
+    // find user with the user id in the token
+    const user = await User.findById(userToken.userId);
+
+    // update user password
+    user.password = password;
+    await user.save();
+    res.status(200).json({ message: "Password reset successfully" });
+});
+
+// change password
+export const changePassword = asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    console.log("Current User ID:", req.user);
+    console.log("Current Password:", currentPassword);
+    console.log("New Password:", newPassword);
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+    }
+    // find user by id
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatched = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatched) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+    } else {
+        // update user password
+        user.password = newPassword;
+        await user.save();
+        res.status(200).json({ message: "Password changed successfully" });
     }
 });
