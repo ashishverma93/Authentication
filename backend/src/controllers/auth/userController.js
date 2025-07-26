@@ -220,7 +220,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
     // send email to user with the verification link
     const subject = "Email Verification - Authentication App";
     const send_to = user.email;
-    const reply_to = "noreply@gmail.com"
+    // const reply_to = "noreply@gmail.com"
     const template = "emailVerification";
     const send_from = process.env.USER_EMAIL;
     const name = user.name;
@@ -275,4 +275,60 @@ export const verifyUser = asyncHandler(async (req, res) => {
     await user.save();
     res.status(200).json({ message: "User verified successfully" });
 
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    // validation
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+    }
+
+    // check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    // see if the reset token exists
+    let token = await Token.findOne({ userId: user._id });
+    // if token exists --> delete the token
+    if (token) {
+        await token.deleteOne();
+    }
+
+    // create new reset token ---> expires in 1 hour
+    const passwordResetToken = crypto.randomBytes(64).toString("hex") + user._id;
+    // hash the reset token
+    const hashedToken = hashToken(passwordResetToken);
+
+    // save the token in the database
+    await new Token({
+        userId: user._id,
+        passwordResetToken: hashedToken,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 60 * 60 * 1000, // 60 minutes
+    }).save();
+
+    // create reset link
+    const resetLink = `${process.env.CLIENT_URL}/reset-password/${passwordResetToken}`;
+
+    // send email to user with the reset link
+    const subject = "Password Reset - Authentication App";
+    const send_to = user.email;
+    // const reply_to = "noreply@gmail.com"
+    const template = "forgotPassword";
+    const send_from = process.env.USER_EMAIL;
+    const name = user.name;
+    const url = resetLink;
+
+    try {
+        await sendEmail(subject, send_to, send_from, template, name, url);
+        // await sendEmailHandlebars(subject, send_to, reply_to, send_from,template, name, url);
+        res.status(200).json({ message: "Password reset email sent successfully" });
+    } catch (error) {
+        console.error("Error sending password reset email:", error);
+        return res.status(500).json({ message: "Error sending password reset email" });
+    }
 });
