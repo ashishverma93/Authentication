@@ -175,7 +175,7 @@ export const userLoginStatus = asyncHandler(async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (decoded) {
-        return res.status(401).json({ message: true });
+        return res.status(200).json({ message: true });
     } else {
         return res.status(401).json({ message: false });
     }

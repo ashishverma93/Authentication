@@ -1,6 +1,7 @@
 import axios from "axios";
+import { HTTP_METHODS } from "next/dist/server/web/http";
 import { useRouter } from "next/navigation";
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 
 const UserContext = React.createContext();
@@ -78,6 +79,48 @@ export const UserContextProvider = ({ children }) => {
         }
     }
 
+    // get user logged in status
+    const userLoginStatus = async () => {
+        setLoading(true);
+        let loggedIn = false;
+        try {
+            const res = await axios.get(`${serverUrl}/api/v1/login-status`, {
+                withCredentials: true,
+            });
+            console.log("login-status res: " + res);
+            if (res.status === 401) {
+                loggedIn = false;
+            } else if (res.status === 200) {
+                loggedIn = true;
+                const message = res.data.message;
+                console.log("login-status message: " + message);
+            }
+            // loggedIn = !!res.data.message;
+            setLoading(false);
+            if (!loggedIn) {
+                router.push("/login");
+            }
+        } catch (error) {
+            console.log("Error checking logged in user", error);
+        }
+    };
+
+    // logout user
+    const logoutUser = async () => {
+        try {
+            const res = await axios.post(`${serverUrl}/api/v1/logout`, {}, {
+                withCredentials: true,
+            });
+            console.log(res.data);
+            toast.success("Logout successful!");
+            setUser({});
+            router.push("/login");
+        } catch (error) {
+            console.log("Error logging out user", error);
+            toast.error(error.response.data.message);
+        }
+    }
+
     // dynamic form handler
     const handlerUserInput = (name) => (e) => {
         const value = e.target.value;
@@ -87,12 +130,17 @@ export const UserContextProvider = ({ children }) => {
         }));
     };
 
+    useEffect(() => {
+        userLoginStatus();
+    }, []);
+
     return (
         <UserContext.Provider value={{
             registerUser,
             userState,
             handlerUserInput,
-            loginUser
+            loginUser,
+            logoutUser
         }}>
             {children}
         </UserContext.Provider>
