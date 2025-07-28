@@ -11,14 +11,14 @@ export const UserContextProvider = ({ children }) => {
     const serverUrl = "http://localhost:8000";
 
     const router = useRouter();
-    const [user, setUser] = useState({});
     const [userState, setUserState] = useState({
         name: "",
         email: "",
         password: "",
     });
+    const [user, setUser] = useState(userState);
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     // register user
     const registerUser = async (e) => {
@@ -83,34 +83,45 @@ export const UserContextProvider = ({ children }) => {
     const userLoginStatus = async () => {
         setLoading(true);
         let loggedIn = false;
-        try {
-            const res = await axios.get(`${serverUrl}/api/v1/login-status`, {
-                withCredentials: true,
-            });
-            console.log("login-status res: " + res);
-            if (res.status === 401) {
+        axios.get(`${serverUrl}/api/v1/login-status`, { withCredentials: true })
+            .then(res => {
+                console.log("login-status res: " + res);
+                if (res.status === 401) {
+                    loggedIn = false;
+                } else if (res.status === 200) {
+                    loggedIn = true;
+                    const message = res.data.message;
+                    console.log("login-status message: " + message);
+                }
+                // loggedIn = !!res.data.message;
+                if (!loggedIn) {
+                    router.push("/login");
+                }
+            })
+            .catch(error => {
                 loggedIn = false;
-            } else if (res.status === 200) {
-                loggedIn = true;
-                const message = res.data.message;
-                console.log("login-status message: " + message);
-            }
-            // loggedIn = !!res.data.message;
-            setLoading(false);
-            if (!loggedIn) {
-                router.push("/login");
-            }
-        } catch (error) {
-            console.log("Error checking logged in user", error);
-        }
+                if (error.response && error.response.status === 401) {
+                    loggedIn = false;
+                }
+                console.error('Error fetching data:', error)
+            }).finally(() => setLoading(false));
+        return loggedIn;
     };
 
     // logout user
     const logoutUser = async () => {
         try {
-            const res = await axios.post(`${serverUrl}/api/v1/logout`, {}, {
-                withCredentials: true,
-            });
+            const res = await axios.post(`${serverUrl}/api/v1/logout`,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+                //     {
+                //     withCredentials: true,
+                // }
+            );
             console.log(res.data);
             toast.success("Logout successful!");
             setUser({});
@@ -118,6 +129,33 @@ export const UserContextProvider = ({ children }) => {
         } catch (error) {
             console.log("Error logging out user", error);
             toast.error(error.response.data.message);
+        }
+    }
+
+    // get the user
+    const getUser = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${serverUrl}/api/v1/user`, {
+                withCredentials: true,
+            });
+            console.log(`user: ${JSON.stringify(res)}`);
+            if (res.status === 200) {
+                setUser((prevState) => {
+                    return {
+                        ...prevState,
+                        ...res.data,
+                    };
+                });
+            } else {
+                setUser({});
+                router.push("/login");
+            }
+        } catch (error) {
+            console.log("Error getting user details", error);
+            toast.error(error.response.data.message);
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -131,7 +169,13 @@ export const UserContextProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        userLoginStatus();
+        const loginStatusGetUser = async () => {
+            const isLoggedIN = await userLoginStatus();
+            if (isLoggedIN) {
+                await getUser();
+            }
+        };
+        loginStatusGetUser();
     }, []);
 
     return (
@@ -140,7 +184,9 @@ export const UserContextProvider = ({ children }) => {
             userState,
             handlerUserInput,
             loginUser,
-            logoutUser
+            logoutUser,
+            userLoginStatus,
+            user
         }}>
             {children}
         </UserContext.Provider>

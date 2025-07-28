@@ -5,6 +5,8 @@ import connect from "./src/db/connect.js";
 import cookieParser from "cookie-parser";
 import fs from "node:fs";
 import errorHandler from "./src/helpers/errorhandler.js";
+import { logError, logRequest } from "./src/log/log.js";
+// import memcached from '../config/memcacheConfig.js';
 // import errorHandler from "./src/helpers/errorhandler.js";
 
 dotenv.config();
@@ -25,6 +27,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(errorHandler); // error handler middleware
+app.use(logError);
+app.use(logRequest);
 
 // routes
 const routeFiles = fs.readdirSync("./src/routes").filter(file => file.endsWith(".js"));
@@ -44,6 +48,7 @@ const server = async () => {
     console.log("server is running normally...");
     try {
         await connect();
+        // await memcached.connect();
         app.listen(port, () => {
             console.log(`Server is running on port ${port}`);
         });
