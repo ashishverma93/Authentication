@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import hashToken from '../../helpers/hashToken.js';
 import { sendEmail, sendEmailHandlebars } from '../../helpers/sendEmail.js';
 
-import { getUserDetail, updateUser, verifyEmailProcess, verifyUserEmailProcess } from '../../services/userService.js';
+import { getUserDetail, updateUserProcess, verifyEmailProcess, verifyUserEmailProcess } from '../../services/userService.js';
 
 
 // get user
@@ -26,7 +26,7 @@ export const getUser = asyncHandler(async (req, res) => {
 
 export const updateUser = asyncHandler(async (req, res) => {
     // get user details from the token ----> protect middleware
-    const updatedUser = await updateUser(req.user._id, req.body);
+    const updatedUser = await updateUserProcess(req.user._id, req.body);
     if (updatedUser) {
         res.status(200).json({
             _id: updatedUser._id,

@@ -27,7 +27,7 @@ export const logger = createLogger({
     transports: [
         new transports.Console(),
         new transports.File({
-            filename: path.join(__dirname, '../../../log-files/app.log'),
+            filename: path.join(__dirname, '../../log-files/app.log'),
             level: "info"
         }),
     ],

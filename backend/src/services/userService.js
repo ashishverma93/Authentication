@@ -1,7 +1,7 @@
-import hashToken from "../helpers/hashToken";
-import { logInfo } from "../log/log";
-import Token from "../models/auth/Token";
-import User from "../models/auth/UserModel";
+import hashToken from "../helpers/hashToken.js";
+import { logInfo } from "../log/log.js";
+import Token from "../models/auth/Token.js";
+import User from "../models/auth/UserModel.js";
 
 export const getUserDetail = async (userId) => {
 
@@ -19,7 +19,7 @@ export const getUserDetail = async (userId) => {
     return await User.findById(userId).select('-password');
 };
 
-export const updateUser = async (userId, user) => {
+export const updateUserProcess = async (userId, user) => {
     const existingUser = await User.findById(userId);
     if (existingUser) {
         // user properties to update

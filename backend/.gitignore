@@ -33,3 +33,4 @@ build/
 # Misc
 coverage/
 *.tgz
+log-files/
